@@ -113,14 +113,6 @@ class Login:
 
         requests.post(url, json=payload, headers=headers)
 
-    def login(self):
-        print("Logging into the Site...")
-        self.getToken()
-        print("---------------------------------------")
-        self.s.post(self.url + '/Account/Login', headers=header, data=aibu_login_data)
-        print("Logging into the Database...")
-        self.loginDB()
-
     def getToken(self):
         res = self.s.get(self.url).text
         soup = BeautifulSoup(res, 'html5lib')
@@ -128,6 +120,14 @@ class Login:
         aibu_login_data['__RequestVerificationToken'] = \
             soup.find('input', attrs={'name': '__RequestVerificationToken'})[
                 'value']
+
+    def login(self):
+        print("Logging into the Site...")
+        self.getToken()
+        print("---------------------------------------")
+        self.s.post(self.url + '/Account/Login', headers=header, data=aibu_login_data)
+        print("Logging into the Database...")
+        self.loginDB()
 
 
 def log():
