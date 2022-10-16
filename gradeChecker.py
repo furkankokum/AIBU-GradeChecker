@@ -27,6 +27,7 @@ login_mysql = mysql.connector.connect(
 mycursor = login_mysql.cursor()
 mycursor.execute("CREATE DATABASE IF NOT EXISTS %s" % os.getenv("database"))
 
+
 class Login:
     def __init__(self):
         self.token_value = None
