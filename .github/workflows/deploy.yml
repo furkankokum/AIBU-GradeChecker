@@ -19,3 +19,4 @@ jobs:
 
     - name: Deploy
       run: rsync -avh --exclude='.git*' "${{ github.workspace }}/" "/opt/python/gradechecker" --delete
+
