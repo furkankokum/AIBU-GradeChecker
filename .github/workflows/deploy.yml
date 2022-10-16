@@ -1,0 +1,21 @@
+name: Deploy - CD
+
+on:
+  push:
+    branches: 
+      - main
+  repository_dispatch:
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [ self-hosted, prod ]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Deploy
+      run: rsync -avh --exclude='.git*' "${{ github.workspace }}/" "/opt/python/gradechecker" --delete

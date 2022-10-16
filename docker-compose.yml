@@ -1,0 +1,18 @@
+version: '3'
+services:
+  gradechecker:
+    container_name: 'gradechecker'
+    build: 
+      context: .
+      dockerfile: Dockerfile
+  mysql:
+    image: mysql
+    env_file: .env
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - 3340:3340
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
