@@ -57,19 +57,19 @@ class Login:
         res = self.s.get(
             'https://ubys.ibu.edu.tr/AIS/Student/Class/Index?sapid=' + sapid).text
         soup = BeautifulSoup(res, 'lxml')
-        cift = 0
-        tek = 1
+        pair = 0
+        odd = 1
         print("---------------------------------------")
 
         tr_text = soup.find('tbody').find_all('tr', recursive=False)
         count_of_tr = str(tr_text).count("<tr>")
 
-        while cift < count_of_tr / 2:
-            lesson_name = soup.find('tbody').find_all('tr', recursive=False)[cift].find_all_next('td')[1].text
-            cift = cift + 2
+        while pair < count_of_tr / 2:
+            lesson_name = soup.find('tbody').find_all('tr', recursive=False)[pair].find_all_next('td')[1].text
+            pair = pair + 2
 
-            exam_results = soup.find('tbody').find_all('tr', recursive=False)[tek].find_next('td').text
-            tek = tek + 2
+            exam_results = soup.find('tbody').find_all('tr', recursive=False)[odd].find_next('td').text
+            odd = odd + 2
             mycursor.execute("SELECT exam_results FROM lesson_exams WHERE lessonName=%s", (lesson_name,))
 
             db_fetched = mycursor and mycursor.fetchone()  # if the left is not none or false then the right one works.
