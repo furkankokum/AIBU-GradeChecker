@@ -134,7 +134,7 @@ def log():
     Login().login()
 
 
-schedule.every(100).seconds.do(log)
+schedule.every(1).seconds.do(log)
 
 while True:
     schedule.run_pending()
