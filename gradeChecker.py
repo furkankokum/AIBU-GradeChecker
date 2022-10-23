@@ -10,13 +10,14 @@ header = {
                   "Safari/537.36",
 }
 
+load_dotenv()
+
 aibu_login_data = {
-    'username': '193405044',
-    'password': 'Fdk5800?',
+    'username': '%s' % os.getenv("usrname"),
+    'password': '%s' % os.getenv("psw"),
     'X-Requested-With': 'XMLHttpRequest'
 }
 
-load_dotenv()
 login_mysql = mysql.connector.connect(
     host=os.getenv("host"),
     user=os.getenv("user"),
@@ -117,9 +118,7 @@ class Login:
         res = self.s.get(self.url).text
         soup = BeautifulSoup(res, 'html5lib')
         self.token_value = soup.find('input', attrs={'name': '__RequestVerificationToken'}).get('value')
-        aibu_login_data['__RequestVerificationToken'] = \
-            soup.find('input', attrs={'name': '__RequestVerificationToken'})[
-                'value']
+        aibu_login_data['__RequestVerificationToken'] = self.token_value
 
     def login(self):
         print("Logging into the Site...")
@@ -134,7 +133,7 @@ def log():
     Login().login()
 
 
-schedule.every(1).seconds.do(log)
+schedule.every(999).seconds.do(log)
 
 while True:
     schedule.run_pending()
