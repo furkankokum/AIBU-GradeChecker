@@ -14,8 +14,8 @@ load_dotenv()
 
 
 aibu_login_data = {
-#     'username': '%s' % os.getenv("usrname")
-#     'password': '%s' % os.getenv("psw"),
+    'username': '%s' % os.getenv("usrname"),
+    'password': '%s' % os.getenv("psw"),
      'X-Requested-With': 'XMLHttpRequest'
 }
 
@@ -56,6 +56,7 @@ class Login:
         db_data=db_fetched and db_fetched[0]
         if db_data is None:
             print("a")
+            load_dotenv()
             mycursor.execute("INSERT INTO users(username,password) VALUES ('%s','%s')"% (os.getenv("usrname"), os.getenv("psw")))
             aibu_login_data['username'] =os.getenv("usrname")
             aibu_login_data['password'] =os.getenv('psw')
