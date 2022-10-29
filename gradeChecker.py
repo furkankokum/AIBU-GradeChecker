@@ -14,7 +14,7 @@ load_dotenv()
 
 
 aibu_login_data = {
-#     'username': '%s' % os.getenv("usrname"),
+#     'username': '%s' % os.getenv("usrname")
 #     'password': '%s' % os.getenv("psw"),
      'X-Requested-With': 'XMLHttpRequest'
 }
