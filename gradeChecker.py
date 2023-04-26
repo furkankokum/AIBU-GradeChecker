@@ -1,3 +1,4 @@
+import json
 import requests
 from bs4 import BeautifulSoup
 import mysql.connector
@@ -14,8 +15,6 @@ load_dotenv()
 
 
 aibu_login_data = {
-    'username': '%s' % os.getenv("usrname"),
-    'password': '%s' % os.getenv("psw"),
      'X-Requested-With': 'XMLHttpRequest'
 }
 
@@ -32,6 +31,7 @@ mycursor.execute("CREATE DATABASE IF NOT EXISTS %s" % os.getenv("database"))
 
 class Login:
     def __init__(self):
+        self.users={}
         self.token_value = None
         self.changing_dataa = None
         self.url = "https://ubys.ibu.edu.tr"
@@ -44,38 +44,46 @@ class Login:
             port=os.getenv("port"),
             database=os.getenv("database")
         )
-
-    def get_login_data_from_mysql(self):
-        global aibu_login_data
-        mycursor = self.db.cursor(buffered=True)
+    def getUsers(self):
+        mycursor = self.db.cursor(buffered=True, dictionary=True)
         mycursor.execute(
             "CREATE TABLE IF NOT EXISTS users(id int PRIMARY KEY AUTO_INCREMENT,username VARCHAR(50),"
             "password VARCHAR(100))")
-        mycursor.execute("SELECT id FROM users")
-        db_fetched = mycursor and mycursor.fetchone()
-        db_data=db_fetched and db_fetched[0]
-        if db_data is None:
-            print("a")
-            load_dotenv()
-            mycursor.execute("INSERT INTO users(username,password) VALUES ('%s','%s')"% (os.getenv("usrname"), os.getenv("psw")))
-            aibu_login_data['username'] =os.getenv("usrname")
-            aibu_login_data['password'] =os.getenv('psw')
-        else:
-            print("s")
-    def loginDB(self):
+        mycursor.execute("SELECT * FROM users")
+        self.users = mycursor.fetchall()
+
+    def getUser(self,userId):
+        for i in range(len(self.users)):
+            global user
+            user=self.users[i]
+            # print(user['id'])
+            if user["id"] == userId:
+                return user
+
+    def log_in(self,userId):
+        user=self.getUser(userId)
+        aibu_login_data['username']=user["username"]
+        aibu_login_data['password']=user["password"]
+        self.s.post(self.url + '/Account/Login', headers=header, data=aibu_login_data)
+        # self.loginDB(userId)
+
+    def loginDB(self,userId):
+        mycursor=self.db.cursor(buffered=True)
+        mycursor.execute("CREATE TABLE IF NOT EXISTS lessons(id int PRIMARY KEY AUTO_INCREMENT,lessonName VARCHAR(50))")
         mycursor = self.db.cursor(buffered=True)
-        # mycursor.execute(
-        #     "CREATE TABLE IF NOT EXISTS users(id int PRIMARY KEY AUTO_INCREMENT,username VARCHAR(50),"
-        #     "password VARCHAR(100))")
         mycursor.execute(
-            "CREATE TABLE IF NOT EXISTS user_grades(id int PRIMARY KEY AUTO_INCREMENT,user_id int,lessonName VARCHAR(50),FOREIGN KEY (user_id) REFERENCES users(id),"
+            "CREATE TABLE IF NOT EXISTS user_grades(id int PRIMARY KEY AUTO_INCREMENT,user_id int,lesson_id int,FOREIGN KEY (user_id) REFERENCES users(id),FOREIGN KEY(lesson_id) REFERENCES lessons(id),"
             "exam_results VARCHAR(100))")
-
-        get_sapid = self.s.get("https://ubys.ibu.edu.tr/AIS/Student/Home/Index").text
+        # mycursor.execute("SELECT id from USERS")
+        # user_id_tuple=mycursor.fetchone()
+        # print(user_id_tuple)
+        # user_id_str="".join(map(str,user_id_tuple))
+        get_sapid = self.s.get("https://ubys.ibu.edu.tr/AIS/Student/Calender/Index").text
         soup = BeautifulSoup(get_sapid, 'lxml')
-
+        # print(soup)
         sapid = soup.find('a', onclick=True)
         sapid = sapid['onclick'].split("'")[1]
+
         res = self.s.get(
             'https://ubys.ibu.edu.tr/AIS/Student/Class/Index?sapid=' + sapid).text
         soup = BeautifulSoup(res, 'lxml')
@@ -92,26 +100,53 @@ class Login:
 
             exam_results = soup.find('tbody').find_all('tr', recursive=False)[odd].find_next('td').text
             odd = odd + 2
-            mycursor.execute("SELECT exam_results FROM user_grades WHERE lessonName=%s", (lesson_name,))
 
-            db_fetched = mycursor and mycursor.fetchone()  # if the left is not none or false then the right one works.
+            mycursor.execute("SELECT id FROM lessons WHERE lessonName=%s", (lesson_name,))
+            db_fetched3=mycursor and mycursor.fetchone()
+            lesson_id=db_fetched3 and db_fetched3[0]
+
+            if lesson_id==None:
+                mycursor.execute("INSERT INTO lessons(lessonName) VALUES(%s)",(lesson_name,))
+            else:
+                pass
+
+            mycursor.execute("SELECT id FROM users WHERE username=%s", (user["username"],))
+            db_fetched2 = mycursor and mycursor.fetchone()
+            db_userId = db_fetched2 and db_fetched2[0]
+
+            mycursor.execute("SELECT exam_results FROM user_grades WHERE lesson_id=%s AND user_id=%s", (lesson_id,db_userId))
+            # print(user["username"])
+            db_fetched = mycursor and mycursor.fetchone()  # if the left one is not none or false then the right one works.
             db_data = db_fetched and db_fetched[0]
 
-            if db_data is None:
-                mycursor.execute("INSERT INTO user_grades(lessonName,exam_results) VALUES (%s,%s)",
-                                 (lesson_name, exam_results))
+            # mycursor.execute("SELECT id FROM users WHERE username=%s", (user["username"],))
+            # db_fetched2=mycursor and mycursor.fetchone()
+            # db_userId=db_fetched2 and db_fetched2[0]
+
+            mycursor.execute("SELECT lessonName FROM lessons WHERE id=%s",(lesson_id,))
+            db_fetched4=mycursor and mycursor.fetchone()
+            db_lessonName=db_fetched4 and db_fetched4[0]
+
+            if db_data is None or db_userId!=userId:
+                mycursor.execute("SELECT id FROM lessons WHERE lessonName=%s", (lesson_name,))
+                db_fetched3 = mycursor and mycursor.fetchone()
+                lesson_id2 = db_fetched3 and db_fetched3[0]
+                mycursor.execute("INSERT INTO user_grades(user_id,lesson_id,exam_results) VALUES (%s,%s,%s)",
+                                 (userId,lesson_id2,exam_results))
                 self.db.commit()
 
-            if exam_results == db_data:
-                mycursor.execute("UPDATE user_grades SET exam_results=%s WHERE lessonName=%s", (exam_results, lesson_name))
-                self.db.commit()
+            if exam_results == db_data and db_userId==userId:
+                 mycursor.execute("UPDATE user_grades SET exam_results=%s WHERE lesson_id=%s AND user_id=%s", (exam_results,lesson_id,db_userId))
+                 self.db.commit()
 
-            else:
-                mycursor.execute("UPDATE user_grades SET exam_results=%s WHERE lessonName=%s", (exam_results, lesson_name))
+            if exam_results!=db_data and db_data is not None :
+                mycursor.execute("UPDATE user_grades SET exam_results=%s,user_id=%s WHERE lesson_id=%s", (exam_results,userId,lesson_id))
                 self.db.commit()
-                mycursor.execute("SELECT lessonName,exam_results FROM user_grades WHERE lessonName=%s", (lesson_name,))
+                mycursor.execute("SELECT lessons.lessonName,user_grades.exam_results FROM lessons JOIN user_grades ON user_grades.lesson_id=lessons.id WHERE lessons.id=%s ", (lesson_id,))
                 changing_data = mycursor.fetchone()
                 self.changing_dataa = "".join(changing_data)
+                # print(self.changing_dataa)
+                # print(type(self.changing_dataa))
                 self.pushNotification()
 
     def pushNotification(self):
@@ -140,22 +175,29 @@ class Login:
         soup = BeautifulSoup(res, 'html5lib')
         self.token_value = soup.find('input', attrs={'name': '__RequestVerificationToken'}).get('value')
         aibu_login_data['__RequestVerificationToken'] = self.token_value
+        # print(self.token_value)
 
     def login(self):
         print("Logging into the Site...")
         self.getToken()
         print("---------------------------------------")
-        self.get_login_data_from_mysql()
-        self.s.post(self.url + '/Account/Login', headers=header, data=aibu_login_data)
+        self.getUsers()
+        self.getUser(1)
+        self.log_in(1)
+        self.loginDB(1)
+        # self.s.post(self.url + '/Account/Login', headers=header, data=aibu_login_data)
         print("Logging into the Database...")
-        self.loginDB()
+        # self.loginDB()
+        # self.get_login_data_from_mysql()
+
+Login().login()
 
 
-def log():
-    Login().login()
-
-
-schedule.every(2).seconds.do(log)
-
-while True:
-    schedule.run_pending()
+# def log():
+#     Login().login()
+#
+#
+# schedule.every(2).seconds.do(log)
+#
+# while True:
+#     schedule.run_pending()
